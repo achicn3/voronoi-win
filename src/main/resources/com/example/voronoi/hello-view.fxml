@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.canvas.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+
+<VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="768.0" prefWidth="1024.0" xmlns="http://javafx.com/javafx/11.0.2" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <HBox alignment="TOP_CENTER" prefHeight="20.0" prefWidth="100.0" spacing="16.0">
+         <children>
+            <Button id="btn_clear" mnemonicParsing="false" text="Clear" />
+            <Button id="btn_run" mnemonicParsing="false" text="Run" />
+            <Button id="btn_open" mnemonicParsing="false" text="Open file" />
+            <Button id="btn_save" mnemonicParsing="false" text="Save file" />
+            <Button id="btn_step" mnemonicParsing="false" text="Step by step" />
+         </children>
+      </HBox>
+      <HBox alignment="CENTER" prefHeight="100.0" prefWidth="200.0">
+         <children>
+            <Canvas id="drawView" height="600.0" width="800.0" />
+         </children>
+      </HBox>
+   </children>
+</VBox>
