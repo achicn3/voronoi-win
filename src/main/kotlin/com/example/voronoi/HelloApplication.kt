@@ -2,9 +2,13 @@ package com.example.voronoi
 
 import com.example.voronoi.Point.Companion.sortPoint
 import com.example.voronoi.Utils.TYPE_CIRCUMCENTER_POINT
+import com.example.voronoi.Utils.TYPE_CONVEX_HULL
 import com.example.voronoi.Utils.TYPE_EDGE
+import com.example.voronoi.Utils.TYPE_HYPER_LINE
+import com.example.voronoi.Utils.TYPE_MERGE_VORONOI
 import com.example.voronoi.Utils.TYPE_MID_POINT
 import com.example.voronoi.Utils.TYPE_POINT
+import com.example.voronoi.Utils.TYPE_VORONOI
 import javafx.application.Application
 import javafx.fxml.FXMLLoader
 import javafx.scene.Scene
@@ -27,69 +31,78 @@ private fun drawPoint(gc: GraphicsContext, x: Double, y: Double, color: Paint) {
 private fun drawPoint(gc: GraphicsContext, x: Double, y: Double) {
     drawPoint(gc, x, y, Color.RED)
 }
-
 private fun drawLine(gc: GraphicsContext, pointA: Point, pointB: Point, color: Paint) {
-    gc.fill = color
+    val temp = gc.stroke
+    gc.stroke = color
     gc.strokeLine(pointA.x, pointA.y, pointB.x, pointB.y)
+    gc.stroke = temp
 }
 
+private fun drawLine(gc:GraphicsContext,edge: Edge,color: Paint){
+    val temp = gc.stroke
+    gc.stroke = color
+    drawLine(gc,edge.pointA,edge.pointB,color)
+    gc.stroke = temp
+}
 private fun drawText(gc: GraphicsContext, x: Double, y: Double, idx: Int) {
+    val temp = gc.fill
     gc.fill = Color.BLACK
     gc.fillText("#$idx", x + 5.0, y + 5.0)
+    gc.fill = temp
 }
 
 
-private fun onDrawVDiagram(gc: GraphicsContext, vDiagram: VDiagram, shouldDraw: Boolean): ArrayList<Edge> {
+private fun onDrawVDiagram(gc: GraphicsContext, edgeList: ArrayList<Edge>, color: Paint): ArrayList<Edge> {
     var idx = 0
     val edge = arrayListOf<Edge>()
-    while (idx < vDiagram.voronoiList.size && idx >= 0) {
-        if (vDiagram.voronoiList[idx].pointA == vDiagram.voronoiList[idx].pointB) {
-            vDiagram.voronoiList.removeAt(idx)
-            --idx
-            continue
+    var i = -1
+    while(i<edgeList.size){
+        ++i
+        if(i<edgeList.size && edgeList[i].pointA == edgeList[i].pointB){
+            edgeList.removeAt(i--)
+            continue;
         }
-        edge.add(Edge(vDiagram.voronoiList[idx].pointA, vDiagram.voronoiList[idx].pointB))
-        if (shouldDraw) drawLine(gc, vDiagram.voronoiList[idx].pointA, vDiagram.voronoiList[idx].pointB, Color.CYAN)
-        ++idx
+        if(i<edgeList.size){
+            drawLine(gc,edgeList[i],color)
+        }
     }
     return edge
 }
 
-private fun onDrawConvexHull(gc: GraphicsContext, pointList: ArrayList<Point>, tangent: ArrayList<Edge>? = null, shouldDraw: Boolean): ArrayList<Edge> {
+private fun onDrawConvexHull(gc: GraphicsContext, pointList: ArrayList<Point>?, tangent: ArrayList<Edge>? = null) {
     var isTangent = false
-    val edge = arrayListOf<Edge>()
+    if(pointList!=null)
     for (idx in 0 until pointList.size) {
         isTangent = false
         if (tangent != null) {
-            for (edge in tangent) {
-                if (edge == Edge(pointList[idx], pointList[(idx + 1) % pointList.size])) {
+            for (e in tangent) {
+                if (e == Edge(pointList[idx], pointList[(idx + 1) % pointList.size])) {
                     isTangent = true
                     break
                 }
             }
         }
         if (isTangent) {
-            if (shouldDraw) drawLine(gc, pointList[idx], pointList[(idx + 1) % pointList.size], Color.BLACK)
-            edge.add(Edge(pointList[idx], pointList[(idx + 1) % pointList.size]))
+            drawLine(gc, pointList[idx], pointList[(idx + 1) % pointList.size], Color.DARKCYAN)
         } else {
-            if (shouldDraw) drawLine(gc, pointList[idx], pointList[(idx + 1) % pointList.size], Color.GREEN)
-            edge.add(Edge(pointList[idx], pointList[(idx + 1) % pointList.size]))
+            drawLine(gc, pointList[idx], pointList[(idx + 1) % pointList.size], Color.LIGHTGREEN)
         }
-        if (shouldDraw) {
-            drawPoint(gc, pointList[idx].x, pointList[idx].y)
-            drawText(
-                    gc,
-                    pointList[idx].x,
-                    pointList[idx].y,
-                    idx
-            )
-        }
+        drawText(
+                gc,
+                pointList[idx].x,
+                pointList[idx].y,
+                idx
+        )
+
     }
-    return edge
 }
 
 private fun clearView(gc: GraphicsContext, canvas: Canvas) {
     gc.clearRect(0.0, 0.0, canvas.width, canvas.height)
+}
+
+fun drawPoint(gc: GraphicsContext,point: Point,color: Paint){
+    drawPoint(gc,point.x,point.y,color)
 }
 
 fun drawPoint(gc: GraphicsContext, type: Int, point: Point) {
@@ -111,14 +124,37 @@ fun drawPoint(gc: GraphicsContext, type: Int, point: Point) {
 
 fun firstRun(gc: GraphicsContext, viewModel: VoronoiViewModel) {
     viewModel.onClickRun()
-    val edge = onDrawVDiagram(gc, viewModel.vDiagram, false)
-    viewModel.step.add(Step(null, edge, TYPE_EDGE, false))
-    val vdEdge = onDrawConvexHull(gc, viewModel.vDiagram.pointList, null, false)
-    viewModel.vDiagram.voronoiList.addAll(vdEdge)
-    viewModel.step.add(Step(null, vdEdge, TYPE_EDGE, false))
+    viewModel.vDiagram = viewModel.calculateVDiagram(viewModel.pointList)
     viewModel.isRun = true
 }
-
+private fun checkType(viewModel: VoronoiViewModel){
+    when(viewModel.step[viewModel.nowStep].type ){
+        TYPE_VORONOI->{
+            viewModel.step[viewModel.nowStep].clear?.let { clear->
+                if(clear){
+                    viewModel.step[viewModel.nowStep-2].enable = false
+                    var count = 0
+                    var i = viewModel.nowStep
+                    while(count<2 && i-1 >=0){
+                        --i
+                        viewModel.step[i].enable?.let { enable->
+                            if((viewModel.step[i].type == TYPE_MERGE_VORONOI || viewModel.step[i].type == TYPE_VORONOI) && enable){
+                                viewModel.step[i].enable = false
+                                ++count
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        TYPE_CONVEX_HULL,TYPE_MERGE_VORONOI->{
+            if(viewModel.step[viewModel.nowStep].clear == true){
+                viewModel.step[viewModel.nowStep-1].enable = false
+                viewModel.step[viewModel.nowStep-2].enable = false
+            }
+        }
+    }
+}
 class HelloApplication : Application() {
     private val viewModel = VoronoiViewModel()
     override fun start(stage: Stage) {
@@ -156,8 +192,8 @@ class HelloApplication : Application() {
                 viewModel.vDiagram.pointList.forEach {
                     drawPoint(gc, it.x, it.y)
                 }
-                onDrawVDiagram(gc, viewModel.vDiagram, true)
-                onDrawConvexHull(gc, viewModel.pointList, null, true)
+                onDrawVDiagram(gc, viewModel.vDiagram.voronoiList, Color.DARKCYAN)
+                onDrawConvexHull(gc, viewModel.pointList, null)
             }
         }
         btnSave.setOnMouseClicked {
@@ -167,11 +203,13 @@ class HelloApplication : Application() {
                 sortedPoint.forEach { point ->
                     writer.println(point.toString())
                 }
-                val sortedEdge = Point.sortEdge(viewModel.vDiagram.voronoiList).distinct()
-                sortedEdge.forEach { edge ->
-                    writer.println(edge.toString())
+                if(viewModel.step.isNotEmpty()) {
+                    val edge = viewModel.step.last().edgeList ?: arrayListOf()
+                    val sortedEdge = Point.sortEdge(edge)
+                    sortedEdge.forEach { e ->
+                        writer.println(e.toString())
+                    }
                 }
-
                 viewModel.isWriteFinish= true
                 writer.close()
             }
@@ -184,18 +222,21 @@ class HelloApplication : Application() {
         }
         btnRun.setOnMouseClicked {
             if (viewModel.pointList.isEmpty()) return@setOnMouseClicked
+            clearView(gc,canvas)
             if (!viewModel.isRun) {
                 firstRun(gc, viewModel)
             }
             for (step in viewModel.nowStep until viewModel.step.size) {
-                viewModel.step[step].pointList?.forEach {
-                    drawPoint(gc, viewModel.step[step].type ?: return@forEach, it)
+                clearView(gc,canvas)
+                viewModel.pointList.forEach {
+                    drawPoint(gc,it,Color.RED)
                 }
-                viewModel.step[step].edgeList?.forEach {
-                    drawLine(gc, it.pointA, it.pointB, Color.BLACK)
-                }
+                checkType(viewModel)
+                if(viewModel.step[step].enable == true)
+                    drawRecord(gc,viewModel.step[step])
             }
             viewModel.nowStep = viewModel.step.size
+            //viewModel.init()
         }
 
         btnNext.setOnMouseClicked {
@@ -207,35 +248,64 @@ class HelloApplication : Application() {
             }
         }
         btnStep.setOnMouseClicked {
+            if (viewModel.pointList.isEmpty()) return@setOnMouseClicked
+            clearView(gc, canvas)
             if (!viewModel.isRun) {
                 firstRun(gc, viewModel)
             }
+            viewModel.pointList.forEach {
+                drawPoint(gc,it,Color.RED)
+            }
+            for(i in viewModel.step){
+                println("step:\n$i")
+            }
             if (viewModel.nowStep >= viewModel.step.size) {
-                clearView(gc, canvas)
-                viewModel.pointList.forEach {
-                    drawPoint(gc, it.x, it.y)
-                }
-                viewModel.nowStep = 0
+                clearView(gc,canvas)
+                viewModel.init()
                 viewModel.isRun = false
                 return@setOnMouseClicked
             }
-            for (i in 0 until viewModel.step.size) {
-                println("Steps $i ${viewModel.step[i].type} ${viewModel.step[i].pointList} ${viewModel.step[i].edgeList}")
-            }
-
-            viewModel.step[viewModel.nowStep].type?.let { type ->
-                viewModel.step[viewModel.nowStep].pointList?.forEach {
-                    drawPoint(gc, type, it)
+            checkType(viewModel)
+            for(i in 0..viewModel.nowStep) {
+                if(viewModel.step[i].enable == true){
+                    drawRecord(gc,viewModel.step[i])
                 }
             }
-            viewModel.step[viewModel.nowStep].edgeList?.forEach {
-                drawLine(gc, it.pointA, it.pointB, Color.BLACK)
-            }
-
             ++viewModel.nowStep
         }
 
     }
+
+    private fun drawRecord(gc: GraphicsContext, step: Step) {
+        when(step.type){
+            TYPE_VORONOI->{
+                val color = if(step.clear == true){
+                    Color.POWDERBLUE
+                }else{
+                    val idx = viewModel.step.indexOf(step)
+                    if(idx %2 ==0) Color.DARKBLUE
+                    else Color.BLACK
+                }
+                step.edgeList?.let {
+                    onDrawVDiagram(gc,it,color)
+                }
+            }
+            TYPE_CONVEX_HULL->{
+                onDrawConvexHull(gc,step.pointList,step.edgeList)
+            }
+            TYPE_HYPER_LINE->{
+                step.edgeList?.forEach {edge->
+                    drawLine(gc,edge,Color.CYAN)
+                }
+            }
+            TYPE_MERGE_VORONOI->{
+                step.edgeList?.forEach { edge ->
+                    drawLine(gc,edge,Color.NAVY)
+                }
+            }
+        }
+    }
+
     companion object {
         @JvmStatic
         fun main(args: Array<String>) {

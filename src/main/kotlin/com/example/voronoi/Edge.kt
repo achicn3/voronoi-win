@@ -15,6 +15,11 @@ data class Edge(
     )
 
     constructor(pointA: Point, pointB: Point) : this(pointA, pointB, null, null)
+    constructor() : this(
+            Point(0.0,0.0),
+            Point(0.0,0.0),
+            null, null
+    )
 
     override fun toString(): String {
         return "E ${pointA.x} ${pointA.y} ${pointB.x} ${pointB.y}"

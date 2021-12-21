@@ -1,5 +1,6 @@
 package com.example.voronoi
 // $LAN=KOTLIN$
+import java.math.RoundingMode
 import kotlin.math.pow
 
 
@@ -89,6 +90,8 @@ data class Point(
                     }
                     x *= -1
                 }
+        fun extendVector(a: Point, mag: Float): Point =
+                Point(a.x * mag, a.y * mag)
 
         fun extendVector(a: Point, mag: Double): Point =
                 Point(a.x * mag, a.y * mag)
@@ -116,14 +119,14 @@ data class Point(
             //要拜訪的點
             val nextPoint = arrayListOf<Int>()
             var noRotate = false //Grahm scan 用來判斷有沒有轉向
-            var sameLine = false
+            var sameLine = true
             //從0號開始
             var startPoint = 0
             //CH頂點數目
             var vertexNumber = 1
             //加入起點
             chIndex.add(startPoint)
-            pointList.forEachIndexed { index, point ->
+            pointList.forEachIndexed { index, _ ->
                 nextPoint.add(index)
             }
             var nextPointIdx = nextPoint[1]
@@ -135,9 +138,9 @@ data class Point(
                     //考慮向量[AB] 目前走到的點是AB某一點
                     if (i == nextPointIdx || i == chIndex[vertexNumber - 1]) continue
                     val crossProduct = getCrossProduct(
-                            pointList[chIndex[vertexNumber - 1]],
                             pointList[i],
-                            pointList[nextPointIdx]
+                            pointList[nextPointIdx],
+                            pointList[chIndex[vertexNumber - 1]]
                     )
                     when {
                         //順時針
@@ -150,9 +153,9 @@ data class Point(
                         }
                         //共線，找最近的點，避開原點
                         crossProduct == 0.0 && checkNear(
-                                pointList[chIndex[vertexNumber - 1]],
                                 pointList[i],
-                                pointList[nextPointIdx]
+                                pointList[nextPointIdx],
+                                pointList[chIndex[vertexNumber - 1]]
                         ) && i != nextPoint[0] -> {
                             temp = i
                         }
@@ -170,7 +173,7 @@ data class Point(
             }
             //全部共線
             if (sameLine) {
-                for (i in chIndex.size - 2 downTo 0) {
+                for (i in chIndex.size - 2 downTo 1) {
                     chIndex.add(chIndex[i])
                 }
             }
@@ -181,7 +184,7 @@ data class Point(
         }
 
         //回傳外積的純量
-        fun getCross(a: Point, b: Point): Double =
+        private fun getCross(a: Point, b: Point): Double =
                 a.x * b.y - a.y * b.x
 
         //取得交點
@@ -195,11 +198,12 @@ data class Point(
                 cross[1] *= -1.0
                 cross[2] *= -1.0
             }
-            if (cross[0] != 0.0 && cross[1] >= 0.0 && cross[1] <= cross[0] && cross[2] >= 0.0 && cross[2] <= cross[0])
+            if (cross[0] != 0.0 && cross[1] >= 0.0 && cross[1] <= cross[0] && cross[2] >= 0.0 && cross[2] <= cross[0]) {
                 return addVector(
                         a1,
-                        extendVector(a, (cross[1] / cross[0]))
+                        extendVector(a, cross[1].toFloat()/cross[0].toFloat())
                 )
+            }
             return null
         }
 
@@ -209,11 +213,11 @@ data class Point(
         //計算OAxOB(左上角為(0,0))
         //因左上角為(0,0)，因此若返回值>0 表示 OA到OB為逆時針(i.e. OB->OA為順時針)
         //外積只適用於三維平面，只需將z=0代入即可，因此公式為 x1y2 - y1x2
-        fun getCrossProduct(a: Point, b: Point, origin: Point): Double =
-                (a.x - origin.x) * (b.y - origin.y) - (a.y - origin.y) * (b.x - origin.x)
-
+        fun getCrossProduct(a: Point, b: Point, origin: Point): Double {
+            return (a.x - origin.x) * (b.y - origin.y) - (a.y - origin.y) * (b.x - origin.x)
+        }
         //取得AB向量
-        fun getVector(a: Point, b: Point): Point =
+        private fun getVector(a: Point, b: Point): Point =
                 Point(b.x - a.x, b.y - a.y)
 
         //AB距離
@@ -221,7 +225,7 @@ data class Point(
                 (a.x - b.x).pow(2) + (a.y - b.y).pow(2)
 
         //檢查OA有沒有比OB近
-        fun checkNear(a: Point, b: Point, origin: Point): Boolean =
+        private fun checkNear(a: Point, b: Point, origin: Point): Boolean =
                 getDistance(a, origin) < getDistance(b, origin)
     }
 }
