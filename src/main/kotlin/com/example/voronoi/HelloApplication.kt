@@ -69,7 +69,7 @@ private fun onDrawVDiagram(gc: GraphicsContext, edgeList: ArrayList<Edge>, color
     return edge
 }
 
-private fun onDrawConvexHull(gc: GraphicsContext, pointList: ArrayList<Point>?, tangent: ArrayList<Edge>? = null) {
+private fun onDrawConvexHull(gc: GraphicsContext, pointList: ArrayList<Point>?, tangent: ArrayList<Edge>? = null,color: Color) {
     var isTangent = false
     if(pointList!=null)
     for (idx in 0 until pointList.size) {
@@ -83,9 +83,9 @@ private fun onDrawConvexHull(gc: GraphicsContext, pointList: ArrayList<Point>?, 
             }
         }
         if (isTangent) {
-            drawLine(gc, pointList[idx], pointList[(idx + 1) % pointList.size], Color.DARKCYAN)
+            drawLine(gc, pointList[idx], pointList[(idx + 1) % pointList.size], color)
         } else {
-            drawLine(gc, pointList[idx], pointList[(idx + 1) % pointList.size], Color.LIGHTGREEN)
+            drawLine(gc, pointList[idx], pointList[(idx + 1) % pointList.size], color)
         }
         drawText(
                 gc,
@@ -193,7 +193,7 @@ class HelloApplication : Application() {
                     drawPoint(gc, it.x, it.y)
                 }
                 onDrawVDiagram(gc, viewModel.vDiagram.voronoiList, Color.DARKCYAN)
-                onDrawConvexHull(gc, viewModel.pointList, null)
+                onDrawConvexHull(gc, viewModel.pointList, null,Color.RED)
             }
         }
         btnSave.setOnMouseClicked {
@@ -223,9 +223,7 @@ class HelloApplication : Application() {
         btnRun.setOnMouseClicked {
             if (viewModel.pointList.isEmpty()) return@setOnMouseClicked
             clearView(gc,canvas)
-            if (!viewModel.isRun) {
-                firstRun(gc, viewModel)
-            }
+            firstRun(gc, viewModel)
             for (step in viewModel.nowStep until viewModel.step.size) {
                 clearView(gc,canvas)
                 viewModel.pointList.forEach {
@@ -233,7 +231,7 @@ class HelloApplication : Application() {
                 }
                 checkType(viewModel)
                 if(viewModel.step[step].enable == true)
-                    drawRecord(gc,viewModel.step[step])
+                    drawRecord(gc,viewModel.step[step],viewModel.randomColors[step])
             }
             viewModel.nowStep = viewModel.step.size
             //viewModel.init()
@@ -256,19 +254,17 @@ class HelloApplication : Application() {
             viewModel.pointList.forEach {
                 drawPoint(gc,it,Color.RED)
             }
-            for(i in viewModel.step){
-                println("step:\n$i")
-            }
             if (viewModel.nowStep >= viewModel.step.size) {
                 clearView(gc,canvas)
                 viewModel.init()
                 viewModel.isRun = false
                 return@setOnMouseClicked
             }
+            println("now step: \n ${viewModel.step[viewModel.nowStep]}")
             checkType(viewModel)
             for(i in 0..viewModel.nowStep) {
                 if(viewModel.step[i].enable == true){
-                    drawRecord(gc,viewModel.step[i])
+                    drawRecord(gc,viewModel.step[i],viewModel.randomColors[i])
                 }
             }
             ++viewModel.nowStep
@@ -276,7 +272,7 @@ class HelloApplication : Application() {
 
     }
 
-    private fun drawRecord(gc: GraphicsContext, step: Step) {
+    private fun drawRecord(gc: GraphicsContext, step: Step,color: Color) {
         when(step.type){
             TYPE_VORONOI->{
                 val color = if(step.clear == true){
@@ -291,7 +287,7 @@ class HelloApplication : Application() {
                 }
             }
             TYPE_CONVEX_HULL->{
-                onDrawConvexHull(gc,step.pointList,step.edgeList)
+                onDrawConvexHull(gc,step.pointList,step.edgeList,color)
             }
             TYPE_HYPER_LINE->{
                 step.edgeList?.forEach {edge->

@@ -16,15 +16,23 @@ import com.example.voronoi.Utils.TYPE_POINT
 import com.example.voronoi.Utils.TYPE_VORONOI
 import javafx.collections.FXCollections
 import javafx.scene.control.Control
+import javafx.scene.paint.Color
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.math.round
 
 class VoronoiViewModel : Control() {
     val pointList = arrayListOf<Point>()
     private var bufferedReader: BufferedReader? = null
+    val randomColors = arrayListOf<Color>().apply {
+        for(i in 1..100){
+            add(Color.color(Math.random(),Math.random(),Math.random()))
+        }
+    }
     var isRun = false
     var isWriteFinish = false
     var isReadFinish = false
@@ -46,6 +54,12 @@ class VoronoiViewModel : Control() {
         step.clear()
         nowStep = 0
         isOpenOutput = false
+        randomColors.apply {
+            clear()
+            for(i in 1..5000){
+                add(Color.color(Math.random(),Math.random(),Math.random()))
+            }
+        }
     }
 
     fun onClickSave(fileName: String) {
@@ -230,7 +244,7 @@ class VoronoiViewModel : Control() {
                 lastNearPoint = point
             }
 
-
+            if(!eliminate.contains(vd.voronoiList.indexOf(candidate)))
             eliminate.add(vd.voronoiList.indexOf(candidate))
             lastEdge = candidate
             when {

@@ -1,19 +1,21 @@
 package com.example.voronoi
 // $LAN=KOTLIN$
 import java.math.RoundingMode
+import kotlin.math.abs
 import kotlin.math.pow
 
 
 /**
  * 定義點的XY座標
  * */
+private val exp = 10e-20
 data class Point(
         var x: Double,
         var y: Double
 ) {
     override fun equals(other: Any?): Boolean {
         if (other == null || other !is Point) return false
-        return x == other.x && y == other.y
+        return abs(x- other.x) <=exp && abs(y-other.y)<= exp
     }
 
     override fun toString(): String {
