@@ -161,7 +161,7 @@ class HelloApplication : Application() {
         val fxmlLoader = FXMLLoader(HelloApplication::class.java.getResource("hello-view.fxml"))
         val scene = Scene(fxmlLoader.load(), 1024.0, 768.0)
 
-        stage.title = "M093040072 Voronoi Diagram"
+        stage.title = "Voronoi Diagram"
         stage.scene = scene
 
         stage.show()
